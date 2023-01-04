@@ -8,11 +8,14 @@ int main(int argc, char** argv)
 {
 	struct 
 	{
-		int prot;
+		int proto;
 		char* host;
 		unsigned short port = 25565;
 		int state = 1;
 	} h;
+
+	map<string, int> proto;
+	proto["1.19.3"] = 761;
 	
 	if (argc > 2)
 	{
@@ -25,4 +28,5 @@ int main(int argc, char** argv)
 	{
 		cout << "Usage: ./mcping (host) [port]\n";
 	}
+	
 }
