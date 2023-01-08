@@ -28,7 +28,7 @@ else:
     sanitize_strings = False
 
 for i in range(1, len(argv)):
-    if argv[i][0] == '-':
+    if argv[i][0] == '-' and argv[i][1] in flags:
         flags[argv[i][1]] = argv[i + 1]
 
 thread_count = int(flags["t"]) + 1
