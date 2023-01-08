@@ -1,46 +1,82 @@
 #!/usr/bin/env python3
-from sys import argv, stdin, stdout, stderr
-from sqlite3 import connect
-from mcping.db import *
+from sys import argv, stdin
+from threading import *
 from mcping import query
-from mcping.db import check_table
+from mcping.db import *
 from mcping.util import Info
 
-if len(argv) < 3:
-    stderr.write("Usage: ./mcping-db [database] [sanitize]\n")
+flags = {
+    "d": "mcping.db",
+    "t": "4",
+    "m": "2",
+}
+
+help_msg = """Usage: ./mcping [flags]
+\t-h\tPrint this message
+\t-d\tSpecify database file (mcping.db)
+\t-s\tEnable string sanitization
+\t-t\tNumber of threads (4)
+\t-m\tSocket timeout (2)"""
+
+if "-h" in argv:
+    print(help_msg)
     exit(0)
 
-if argv[2].lower() in ["true", "yes", "on", "1"]:
-    schizo_mode = True
+if "-s" in argv:
+    sanitize_strings = True
 else:
-    schizo_mode = False
+    sanitize_strings = False
 
-conn = connect(argv[1])
+for i in range(1, len(argv)):
+    if argv[i][0] == '-':
+        flags[argv[i][1]] = argv[i + 1]
+
+thread_count = int(flags["t"]) + 1
+timeout = int(flags["m"])
+conn = connect(flags["d"])
 db = conn.cursor()
-if not check_table(db, "Servers"):
-    create(db)
 
-for line in stdin:
-    line = line[:-1]
-    if line:
-        lines = line.split(" ")
-        host = lines[0]
-        port = 25565
-        timeout = 3
-        l = len(lines)
-        if l > 1:
-            port = int(lines[1])
-        if l > 2:
-            timeout = int(lines[2])
-        d = query(host, port, timeout)\
+collected = []
+threads = []
+def main():
+    if not check_table(db, "Servers"):
+        create(db)
 
-        if d:
-            info = Info.from_dict(host, d)
-            if info.proto < 0 or info.max_players == 0:
-                continue
-            if schizo_mode: info.sanitize()
-            insert(db, info)
+    for line in stdin:
+        while collected:
+            insert(db, collected.pop())
             conn.commit()
-            print("Server inserted into db")
+            print("Committed to db")
+
+        while active_count() == thread_count:
+            pass
+        l = line.split(" ")
+        if not l: continue
+        if len(l) == 1:
+            port = 25565
+        else:
+            port = int(l[1])
+        s = l[0].strip()
+        t = Thread(target=run_target, args=(s, port, timeout), name=s)
+        t.start()
+        threads.append(t)
+    while active_count() != 1:
+        pass
+    while collected:
+        insert(db, collected.pop())
+        conn.commit()
+        print("Committed to db")
 
 
+def run_target(host, port, m):
+    d = query(host, port, m)
+    if d:
+        info = Info.from_dict(host, d)
+        if info.proto <= 0 or info.max_players == 0:
+            return
+        if sanitize_strings: info.sanitize()
+        collected.append(info)
+        print(current_thread().name + ": Collected info for " + host)
+
+if __name__ == "__main__":
+    main()

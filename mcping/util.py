@@ -39,29 +39,42 @@ def remove_section_signs(s: str) -> str:
 
 
 class Info:
-    def __init__(self, host: str, software: str, proto: int, motd: str, max_players: int, secure_chat: bool):
+    def __init__(self, host: str, software: str, proto: int, motd: str, max_players: int, current_players: int, secure_chat: bool):
         self.host = host
         self.software = software
         self.proto = proto
         self.motd = motd
         self.max_players = max_players
+        self.current_players = current_players
         self.secure_chat = secure_chat
 
     @classmethod
     def from_dict(cls, host: str, d: dict):
-        software = d["version"]["name"]
-        proto = d["version"]["protocol"]
+        if "version" in d:
+            software = d["version"]["name"]
+            proto = d["version"]["protocol"]
+        else:
+            software = ""
+            proto = 1337
         if "enforcesSecureChat" in d:
             secure_chat = d["enforcesSecureChat"]
         else:
             secure_chat = None
 
-        if "text" in d["description"]:
-            motd = d["description"]["text"]
+        if "description" in d:
+            if "text" in d["description"]:
+                motd = d["description"]["text"]
+            else:
+                motd = d["description"]
         else:
-            motd = d["description"]
-
-        return Info(host, software, proto, motd, d["players"]["max"], secure_chat)
+            motd = "<not received>"
+        if "players" in d:
+            p_current = d["players"]["online"]
+            p_max = d["players"]["max"]
+        else:
+            p_max = 0
+            p_current = 0
+        return Info(host, software, proto, motd, p_max, p_current, secure_chat)
 
     def sanitize(self):
         pattern = r"drop|delete|exec"

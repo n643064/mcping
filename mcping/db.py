@@ -6,11 +6,11 @@ def check_table(db: Cursor, name: str) -> bool:
     return db.fetchone()[0] == 1
 
 def create(db: Cursor):
-    db.execute("CREATE TABLE Servers (Host VARCHAR(100), Software VARCHAR(100), Protocol TINYINT, Motd VARCHAR(200), MaxPlayers INT, SecureChat BOOLEAN, PRIMARY KEY (Host))")
+    db.execute("CREATE TABLE Servers (Host VARCHAR(100), Software VARCHAR(100), Protocol TINYINT, Motd VARCHAR(200), MaxPlayers INT, OnlinePlayers INT,  SecureChat BOOLEAN, UpdateTime DATE , PRIMARY KEY (Host))")
 
 def insert(db: Cursor, info: Info):
-    db.execute(f"""REPLACE INTO Servers (Host, Software, Protocol, Motd, MaxPlayers, SecureChat)
-              VALUES (?, ?, ?, ?, ?, ?)""", (info.host, info.software, info.proto, info.motd, info.max_players, info.secure_chat))
+    db.execute(f"""REPLACE INTO Servers (Host, Software, Protocol, Motd, MaxPlayers, OnlinePlayers, SecureChat, UpdateTime)
+              VALUES (?, ?, ?, ?, ?, ?, ?, DateTime('now'))""", (info.host, info.software, info.proto, info.motd, info.max_players, info.current_players, info.secure_chat))
 
 def print_all(db: Cursor) -> list:
     db.execute("SELECT * FROM Servers")
